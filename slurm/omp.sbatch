@@ -1,30 +1,32 @@
 #!/bin/bash
-#SBATCH --job-name=rk1-t11-omp
+#SBATCH --job-name=t11_omp
 #SBATCH --partition=standard
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=32
-#SBATCH --time=00:30:00
+#SBATCH --cpus-per-task=48
+#SBATCH --exclusive
+#SBATCH --mem=16G
+#SBATCH --nodelist=pbcn02   # pbcn01/pbcn03 have no C headers, gcc fails there
+#SBATCH --time=00:40:00
 #SBATCH --output=logs/omp_%j.out
+# Track 11, histogram + counting sort. Submit from the track folder: sbatch slurm/omp.sbatch
 
-# запуск из папки репозитория: sbatch slurm/omp.sbatch
-
-cd "$SLURM_SUBMIT_DIR"
+gcc -O3 src/seq.c -o seq || exit 1
+gcc -O3 -fopenmp src/omp.c -o omp || exit 1
 echo "# node: $(hostname)"
+lscpu | grep -E '^(Model name|Socket|Core|Thread|NUMA node[0-9])' | sed 's/^/# /'
+echo "# $(gcc --version | head -1)"
+
+# spread: memory-bound kernel, so use both sockets' memory bandwidth from p = 2 on
+export OMP_PLACES=cores OMP_PROC_BIND=spread
 echo "version;p;time_s;CHECK"
 
-# без эталона CHECK не посчитать
-[ -f ref_500000000.txt ] || ./bin/seq
+for r in 1 2 3; do ./seq; done
 
-export OMP_PLACES=cores
-export OMP_PROC_BIND=close
-
-for mode in atomic local; do
-    export OMP_MODE=$mode
-    for t in 1 2 4 8 16 32; do
-        export OMP_NUM_THREADS=$t
-        for r in 1 2 3; do
-            ./bin/omp
-        done
+for v in atomic local; do
+  for p in 1 2 4 8 16 32; do
+    for r in 1 2 3; do
+      OMP_NUM_THREADS=$p ./omp $v
     done
+  done
 done
