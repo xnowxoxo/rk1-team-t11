@@ -83,7 +83,8 @@ python3.11 scripts/plot_omp.py   # нужен matplotlib (есть в python3.11
 ## Узел
 
 OpenMP-замеры: pbcn02, 2 × Intel Xeon Gold 6336Y @ 2.40 GHz, 2 сокета × 24 ядра, HT = 2, 2 NUMA-узла; gcc 8.5.0.
-Запуск с `--exclusive`, `OMP_PLACES=cores`, `OMP_PROC_BIND=spread`: задача ограничена памятью,
-поэтому уже с p = 2 используются контроллеры памяти обоих сокетов.
+Запуск с `--exclusive`, `OMP_PLACES=cores`, `OMP_PROC_BIND=spread`, каждый поток на своём физическом ядре.
+Из-за нумерации ядер на этом узле `spread` при p = 2, 4, 8 и 24 ставит все потоки на сокет 0,
+при p = 16 — 8 + 8, при p = 32 — 24 + 8.
 
 MPI: заполнить `mpirun --version`.
